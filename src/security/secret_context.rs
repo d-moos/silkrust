@@ -83,7 +83,7 @@ impl SecretContext {
     fn ensure_is_finalized(&self) -> Result<&CompleteContext, CalculationError> {
         match self {
             SecretContext::Initialized(_) => Err(CalculationError::InvalidStage),
-            SecretContext::Finalized(c) => c,
+            SecretContext::Finalized(c) => Ok(c),
         }
     }
 }
