@@ -13,7 +13,7 @@ pub struct Security {
 
 impl Security {
     fn encode(&mut self, data: &[u8]) -> Option<(u8, u8)> {
-        self.encoder.map_or(None, |mut e| {
+        self.encoder.as_mut().map_or(None, | e| {
             Some((e.sequencer.next(), e.checksum.compute(data, data.len())))
         })
     }

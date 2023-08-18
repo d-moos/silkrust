@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 bytes = "1.4.0"
 blowfish-compat = { git = "https://git.eternalwings.de/tim/blowfish-compat.rs.git", branch = "master" }
+bitfield-struct = "0.5"

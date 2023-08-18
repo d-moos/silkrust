@@ -1,11 +1,12 @@
 use std::fmt::{Display, Formatter};
 
-const NO_DIR: u8 = 0;
-const REQ: u8 = 1;
-const ACK: u8 = 2;
+const NO_DIR: u16 = 0;
+const REQ: u16 = 1;
+const ACK: u16 = 2;
 
 /// Message Direction
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[repr(u16)]
 pub enum MessageDirection {
     /// No Direction
     ///
@@ -33,23 +34,21 @@ impl Display for MessageDirection {
     }
 }
 
-impl From<u8> for MessageDirection {
-    fn from(value: u8) -> Self {
+impl MessageDirection {
+    pub const fn into_bits(self) -> u16 {
+        match self {
+            MessageDirection::NoDir => NO_DIR,
+            MessageDirection::Req => REQ,
+            MessageDirection::Ack => ACK,
+        }
+    }
+
+    pub const fn from_bits(value: u16) -> Self {
         match value {
             NO_DIR => MessageDirection::NoDir,
             REQ => MessageDirection::Req,
             ACK => MessageDirection::Ack,
             _ => panic!("invalid message direction")
-        }
-    }
-}
-
-impl Into<u8> for MessageDirection {
-    fn into(self) -> u8 {
-        match self {
-            MessageDirection::NoDir => NO_DIR,
-            MessageDirection::Req => REQ,
-            MessageDirection::Ack => ACK,
         }
     }
 }

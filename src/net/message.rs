@@ -7,7 +7,7 @@ mod direction;
 pub use self::header::Header;
 mod header;
 
-pub use self::id::{MessageId, MessageOperation};
+pub use self::id::MessageId;
 mod id;
 
 pub use self::message::Message;

@@ -1,12 +1,13 @@
 use std::fmt::{Display, Formatter};
 
-const NONE: u8 = 0;
-const NET_ENGINE: u8 = 1;
-const FRAMEWORK: u8 = 2;
-const GAME: u8 = 3;
+const NONE: u16 = 0;
+const NET_ENGINE: u16 = 1;
+const FRAMEWORK: u16 = 2;
+const GAME: u16 = 3;
 
 /// The message kind
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[repr(u16)]
 pub enum MessageKind {
     /// ? examples?
     None,
@@ -32,8 +33,8 @@ impl Display for MessageKind {
     }
 }
 
-impl Into<u8> for MessageKind {
-    fn into(self) -> u8 {
+impl MessageKind {
+    pub const fn into_bits(self) -> u16 {
         match self {
             MessageKind::None => NONE,
             MessageKind::NetEngine => NET_ENGINE,
@@ -41,10 +42,8 @@ impl Into<u8> for MessageKind {
             MessageKind::Game => GAME
         }
     }
-}
 
-impl From<u8> for MessageKind {
-    fn from(value: u8) -> Self {
+    pub const fn from_bits(value: u16) -> Self {
         match value {
             NONE => MessageKind::None,
             NET_ENGINE => MessageKind::NetEngine,

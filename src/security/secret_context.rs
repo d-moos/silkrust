@@ -88,14 +88,14 @@ impl SecretContext {
     }
 }
 
-struct PartialContext {
+pub struct PartialContext {
     generator: u32,
     prime: u32,
     private: u32,
     local_public: u32,
 }
 
-struct CompleteContext {
+pub struct CompleteContext {
     local_public: u32,
     remote_public: u32,
     shared_secret: u32,
