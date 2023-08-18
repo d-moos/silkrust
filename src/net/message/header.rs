@@ -1,6 +1,9 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::net::message::id::MessageId;
 
+pub const HEADER_SIZE: usize = 6;
+const HEADER_ENC_MASK: u16 = 0x8000;
+
 /// Message Header
 ///
 /// The header of a network message which is always exactly 6 bytes
@@ -20,6 +23,16 @@ pub struct Header {
     checksum: u8,
 }
 
+impl Header {
+    pub fn message_size(&self) -> u16 {
+        self.data_size() + HEADER_SIZE as u16
+    }
+
+    pub fn data_size(&self) -> u16 {
+        self.size & !HEADER_ENC_MASK
+    }
+}
+
 impl From<Bytes> for Header {
     fn from(mut value: Bytes) -> Self {
         Self {
@@ -27,6 +40,17 @@ impl From<Bytes> for Header {
             id: MessageId::from(value.get_u16_le()),
             sequence: value.get_u8(),
             checksum: value.get_u8()
+        }
+    }
+}
+
+impl From<&[u8]> for Header {
+    fn from(buffer: &[u8]) -> Self {
+        Header {
+            size: u16::from_le_bytes(buffer[0..2].try_into().unwrap()),
+            id: MessageId::from(u16::from_le_bytes(buffer[2..4].try_into().unwrap())),
+            checksum: buffer[5],
+            sequence: buffer[4],
         }
     }
 }
