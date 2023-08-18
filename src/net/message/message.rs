@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use crate::net::message::header::Header;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::net::message::HEADER_SIZE;
@@ -16,6 +17,17 @@ impl Message {
             header,
             data
         }
+    }
+}
+
+impl Display for Message {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}: {:X}",
+            self.header,
+            self.data
+        )
     }
 }
 

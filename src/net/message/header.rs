@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::net::message::id::MessageId;
 
@@ -22,6 +23,16 @@ pub struct Header {
 
     /// cyclic redundancy check
     checksum: u8,
+}
+
+impl Display for Header {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.id
+        )
+    }
 }
 
 impl Header {

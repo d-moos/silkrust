@@ -41,7 +41,7 @@ impl Display for MessageId {
         let opcode: u16 = self.clone().into();
         write!(
             f,
-            "[{} | {}], {} (0x{:X})",
+            "[{} | {} | {}] (0x{:X})",
             self.direction(),
             self.kind(),
             self.operation(),
