@@ -4,9 +4,19 @@ use crate::net::message::HEADER_SIZE;
 
 pub const MAX_MESSAGE_SIZE: usize = 4096;
 
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Message {
     header: Header,
     data: Bytes,
+}
+
+impl Message {
+    pub fn new(header: Header, data: Bytes) -> Self {
+        Self {
+            header,
+            data
+        }
+    }
 }
 
 impl From<Bytes> for Message {

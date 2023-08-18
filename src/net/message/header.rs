@@ -7,6 +7,7 @@ const HEADER_ENC_MASK: u16 = 0x8000;
 /// Message Header
 ///
 /// The header of a network message which is always exactly 6 bytes
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Header {
     /// message data size
     ///
@@ -24,6 +25,15 @@ pub struct Header {
 }
 
 impl Header {
+    pub fn new(id: MessageId, size: u16) -> Self {
+        Self {
+            id,
+            size,
+            checksum: 0,
+            sequence: 0
+        }
+    }
+
     pub fn message_size(&self) -> u16 {
         self.data_size() + HEADER_SIZE as u16
     }

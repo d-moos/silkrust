@@ -26,6 +26,7 @@ use std::fmt::{Display, Formatter};
 ///          Kind
 /// ```
 #[bitfield(u16)]
+#[derive(PartialEq, Eq)]
 pub struct MessageId {
     #[bits(12)]
     pub operation: usize,
