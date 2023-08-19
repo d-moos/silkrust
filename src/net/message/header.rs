@@ -45,6 +45,10 @@ impl Header {
         }
     }
 
+    pub fn id(&self) -> &MessageId {
+        &self.id
+    }
+
     pub fn message_size(&self) -> u16 {
         self.data_size() + HEADER_SIZE as u16
     }

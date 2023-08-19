@@ -1,19 +1,28 @@
-use tokio::io::AsyncReadExt;
-use tokio::net::TcpStream;
-use silkrust::net::MessageBuffer;
+use silkrust::net::message::{Message, MessageDirection, MessageId, MessageKind};
+use silkrust::net::{MessageTable, NetClient, Process};
+use std::collections::HashMap;
+
+struct HandshakeReq;
+impl Process for HandshakeReq {
+    fn process(&mut self, m: Message) {
+        println!("hey!");
+    }
+}
 
 #[tokio::main]
 async fn main() {
+    let mut m_table: MessageTable = HashMap::new();
+    m_table.insert(
+        MessageId::new()
+            .with_operation(0)
+            .with_kind(MessageKind::NetEngine)
+            .with_direction(MessageDirection::Req),
+        Box::new(HandshakeReq),
+    );
 
-    let mut stream = TcpStream::connect("filter.evolin.net:4001").await.expect("asdfasdfasdf");
+    let mut client = NetClient::connect("filter.evolin.net:4001", m_table)
+        .await
+        .expect("/");
 
-    let mut message_buffer = MessageBuffer::default();
-    let mut netbuffer = [0u8;4096];
-
-    let len = stream.read(&mut netbuffer).await.unwrap();
-    let messages = message_buffer.read(netbuffer, len);
-
-    for message in messages {
-        println!("{}", message);
-    }
+    client.run().await;
 }

@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use crate::net::message::header::Header;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crate::net::message::HEADER_SIZE;
+use crate::net::message::{HEADER_SIZE, MessageId};
 
 pub const MAX_MESSAGE_SIZE: usize = 4096;
 
@@ -17,6 +17,10 @@ impl Message {
             header,
             data
         }
+    }
+
+    pub fn header(&self) -> &Header {
+        &self.header
     }
 }
 
