@@ -7,5 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.26.0", features = ["full"] }
-queues = "1.1.0"
+bitfield-struct = "0.5"
+bytes = "1.4.0"
 silkrust = { path = "../" }
+rand = "0.8.5"

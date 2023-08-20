@@ -1,13 +1,7 @@
-use silkrust::net::message::{Message, MessageDirection, MessageId, MessageKind};
+use silkrust::net::message::{Header, Message, MessageDirection, MessageId, MessageKind};
 use silkrust::net::{MessageTable, NetClient, Process};
 use std::collections::HashMap;
-
-struct HandshakeReq;
-impl Process for HandshakeReq {
-    fn process(&mut self, m: Message) {
-        println!("hey!");
-    }
-}
+use silkrust::net::processor::HandshakeReqProcessor;
 
 #[tokio::main]
 async fn main() {
@@ -17,12 +11,14 @@ async fn main() {
             .with_operation(0)
             .with_kind(MessageKind::NetEngine)
             .with_direction(MessageDirection::Req),
-        Box::new(HandshakeReq),
+        Box::new(HandshakeReqProcessor::default()),
     );
 
-    let mut client = NetClient::connect("filter.evolin.net:4001", m_table)
+    let mut client = NetClient::connect("filter.evolin.net:4001")
         .await
         .expect("/");
 
-    client.run().await;
+    client.run(m_table).await;
+
+    println!("done");
 }

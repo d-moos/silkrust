@@ -11,3 +11,4 @@ blowfish-compat = { git = "https://git.eternalwings.de/tim/blowfish-compat.rs.gi
 bitfield-struct = "0.5"
 tokio = { version = "1.26.0", features = ["full"] }
 queues = "1.1.0"
+rand = "0.8.5"

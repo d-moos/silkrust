@@ -19,18 +19,20 @@ pub struct Header {
     id: MessageId,
 
     /// sequential check, ensures a message is not being replayed
-    sequence: u8,
+    pub(crate) sequence: u8,
 
     /// cyclic redundancy check
-    checksum: u8,
+    pub(crate) checksum: u8,
 }
 
 impl Display for Header {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}",
-            self.id
+            "{} [{:X} {:X}]",
+            self.id,
+            self.sequence,
+            self.checksum,
         )
     }
 }

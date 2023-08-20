@@ -1,5 +1,7 @@
-use crate::security::{Checksum, Sequencer};
-use blowfish_compat::BlowfishCompat;
+use crate::security::{BlowfishKey, Checksum, Sequencer};
+use blowfish_compat::{Block, BlockEncrypt, BlowfishCompat, NewBlockCipher};
+use bytes::Bytes;
+use crate::net::message::Message;
 
 struct Encoder {
     sequencer: Sequencer,
@@ -7,14 +9,83 @@ struct Encoder {
 }
 
 pub struct Security {
-    blowfish: BlowfishCompat,
+    blowfish: Option<BlowfishCompat>,
     encoder: Option<Encoder>,
 }
 
 impl Security {
-    fn encode(&mut self, data: &[u8]) -> Option<(u8, u8)> {
-        self.encoder.as_mut().map_or(None, | e| {
+    pub fn encode(&mut self, data: &[u8]) -> Option<(u8, u8)> {
+        self.encoder.as_mut().map_or(None, |e| {
             Some((e.sequencer.next(), e.checksum.compute(data, data.len())))
         })
+    }
+
+    pub fn encode_new(&mut self, message: Message) -> Message {
+        if let Some(encoder) = &mut self.encoder {
+            let sequence = encoder.sequencer.next();
+
+            let bytes: Bytes = message.into();
+            let checksum = encoder.checksum.compute(bytes.as_ref(), bytes.len());
+
+            let mut message = Message::from(bytes);
+            // message.header_mut().sequence = sequence;
+            message.header_mut().checksum = checksum;
+
+            message
+        } else {
+            message
+        }
+    }
+
+    pub fn encrypt(&self, data: &mut [u8]) {
+        if let Some(blowfish) = self.blowfish {
+            blowfish.encrypt_block(Block::from_mut_slice(data));
+        } else {
+            println!("encrypt called with unitialized blowfish!");
+            // TODO: warn that there is no blowfish initialized!
+        }
+    }
+}
+
+pub struct SecurityBuilder {
+    key: Option<BlowfishKey>,
+    error_detection: Option<(u32, u32)>,
+}
+
+impl Default for SecurityBuilder {
+    fn default() -> Self {
+        Self {
+            key: None,
+            error_detection: None,
+        }
+    }
+}
+
+impl SecurityBuilder {
+    pub fn blowfish(self, key: BlowfishKey) -> Self {
+        Self {
+            error_detection: self.error_detection,
+            key: Some(key),
+        }
+    }
+
+    pub fn error_detection(self, error_detection: (u32, u32)) -> Self {
+        Self {
+            error_detection: Some(error_detection),
+            key: self.key,
+        }
+    }
+
+    pub fn build(self) -> Security {
+        Security {
+            blowfish: self.key.map(|k| {
+                BlowfishCompat::new_from_slice(k.as_slice())
+                    .expect("blowfish initialization failed")
+            }),
+            encoder: self.error_detection.map(|t| Encoder {
+                sequencer: Sequencer::new(t.0),
+                checksum: Checksum::new(t.1),
+            }),
+        }
     }
 }

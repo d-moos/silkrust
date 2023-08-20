@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 use crate::net::message::header::Header;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::net::message::{HEADER_SIZE, MessageId};
+use crate::security::Security;
 
 pub const MAX_MESSAGE_SIZE: usize = 4096;
 
@@ -19,9 +20,15 @@ impl Message {
         }
     }
 
+    pub fn header_mut(&mut self) -> &mut Header {
+        &mut self.header
+    }
+
     pub fn header(&self) -> &Header {
         &self.header
     }
+
+    pub fn reader(self) -> Bytes { self.data }
 }
 
 impl Display for Message {
@@ -54,12 +61,13 @@ impl From<&[u8]> for Message {
 }
 
 
-impl Into<Bytes> for Message {
+impl<'a> Into<Bytes> for Message {
     fn into(self) -> Bytes {
         let mut mem = BytesMut::new();
 
         mem.put::<Bytes>(self.header.into());
         mem.put::<Bytes>(self.data);
+
 
         mem.freeze()
     }

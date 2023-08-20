@@ -1,104 +1,66 @@
-/// A struct keeping track of the DH key exchange state
-///
-/// `SecretContext` keeps track of all data that is necessary for a [Diffie Hellman key exchange](https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange)
-/// - `Initialized`: Only the local side is known and the remote public has not been shared yet
-/// - `Finalized`: All relevant data is known and the shared_secret has been calculated
-pub enum SecretContext {
-    Initialized(PartialContext),
-    Finalized(CompleteContext),
-}
-
-pub enum CalculationError {
-    InvalidStage,
-}
-
-impl SecretContext {
-    /// Initializes a new SecretContext and puts it into the `Initialized` stage
-    pub fn initialize(generator: u32, prime: u32, private: u32) -> Self {
-        SecretContext::Initialized(PartialContext {
-            generator,
-            prime,
-            private,
-            local_public: g_pow_x_mod_p(generator, prime, prime.into()),
-        })
-    }
-
-    /// Finalizes a previously `Initialized` SecretContext and puts it into the `Finalized` stage.
-    /// if the SecretContext is already in the `Finalized` stage, the origin context is returned.
-    pub fn finalize(self, remote_public: u32) -> Self {
-        match self {
-            SecretContext::Initialized(i) => SecretContext::Finalized(CompleteContext {
-                local_public: i.local_public,
-                remote_public,
-                shared_secret: g_pow_x_mod_p(remote_public, i.private, i.prime.into()),
-            }),
-            SecretContext::Finalized(_) => self,
-        }
-    }
-
-    /// Calculates the local signature from a `Finalized` SecretContext.
-    ///
-    /// # Errors
-    ///
-    /// If the function is called on an `Initialized` SecretContext,
-    /// a `CalculationError::InvalidStage` error is returned.
-    pub fn local_signature(&self) -> Result<Signature, CalculationError> {
-        let context = self.ensure_is_finalized()?;
-        Ok(calculate_signature(
-            context.shared_secret,
-            context.local_public,
-            context.remote_public,
-        ))
-    }
-
-    /// Calculates the remote signature from a `Finalized` SecretContext.
-    ///
-    /// # Errors
-    ///
-    /// If the function is called on an `Initialized` SecretContext,
-    /// a `CalculationError::InvalidStage` error is returned.
-    pub fn remote_signature(&self) -> Result<Signature, CalculationError> {
-        let context = self.ensure_is_finalized()?;
-        Ok(calculate_signature(
-            context.shared_secret,
-            context.remote_public,
-            context.local_public,
-        ))
-    }
-
-    /// Calculates a blowfish key from a `Finalized` SecretContext
-    ///
-    /// # Errors
-    ///
-    /// If the function is called on an `Initialized` SecretContext,
-    /// a `CalculationError::InvalidStage` error is returned.
-    pub fn blowfish_key(&self) -> Result<BlowfishKey, CalculationError> {
-        let context = self.ensure_is_finalized()?;
-        Ok(calculate_key(
-            context.shared_secret,
-            context.remote_public,
-            context.local_public,
-        ))
-    }
-    fn ensure_is_finalized(&self) -> Result<&CompleteContext, CalculationError> {
-        match self {
-            SecretContext::Initialized(_) => Err(CalculationError::InvalidStage),
-            SecretContext::Finalized(c) => Ok(c),
-        }
-    }
-}
-
-pub struct PartialContext {
+pub struct SecretContext {
+    initial_key: BlowfishKey,
     generator: u32,
     prime: u32,
     private: u32,
-    local_public: u32,
+    remote_public: Option<u32>,
 }
 
-pub struct CompleteContext {
-    local_public: u32,
-    remote_public: u32,
-    shared_secret: u32,
+#[derive(Debug)]
+pub struct RemotePublicNotSet;
+
+impl SecretContext {
+    pub fn new(
+        initial_key: BlowfishKey,
+        generator: u32,
+        prime: u32,
+        private: u32,
+        remote_public: Option<u32>,
+    ) -> Self {
+        Self {
+            initial_key,
+            generator,
+            prime,
+            private,
+            remote_public,
+        }
+    }
+
+    pub fn local_public(&self) -> u32 {
+        g_pow_x_mod_p(self.generator, self.private, self.prime.into())
+    }
+
+    pub fn set_remote_public(&mut self, remote_public: u32) {
+        self.remote_public = Some(remote_public)
+    }
+
+    pub fn remote_public(&self) -> Result<u32, RemotePublicNotSet> {
+        self.remote_public.ok_or(RemotePublicNotSet)
+    }
+
+    pub fn shared_secret(&self) -> Result<u32, RemotePublicNotSet> {
+        self.remote_public
+            .map(|r| g_pow_x_mod_p(r, self.private, self.prime.into()))
+            .ok_or(RemotePublicNotSet)
+    }
+
+    pub fn local_signature(&self) -> Result<Signature, RemotePublicNotSet> {
+        self.remote_public
+            .map(|r| calculate_signature(self.shared_secret().unwrap(), self.local_public(), r))
+            .ok_or(RemotePublicNotSet)
+    }
+
+    pub fn remote_signature(&self) -> Result<Signature, RemotePublicNotSet> {
+        self.remote_public
+            .map(|r| calculate_signature(self.shared_secret().unwrap(), r, self.local_public()))
+            .ok_or(RemotePublicNotSet)
+    }
+
+    pub fn intermediary_key(&self) -> Result<BlowfishKey, RemotePublicNotSet> {
+        self.remote_public
+            .map(|r| calculate_key(self.shared_secret().unwrap(), r, self.local_public()))
+            .ok_or(RemotePublicNotSet)
+    }
 }
 
 /// A signature that is used to verify a successful secret exchange
