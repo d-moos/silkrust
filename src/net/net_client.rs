@@ -32,6 +32,10 @@ impl NetClient {
         self.security = Some(security);
     }
 
+    pub fn security_mut(&mut self) -> &mut Option<Security> {
+        &mut self.security
+    }
+
     pub async fn run(&mut self, mut message_table: MessageTable) {
         loop {
             if let Some(m) = self.connection.take().unwrap() {
@@ -57,7 +61,7 @@ impl NetClient {
 
     pub fn send(&mut self, message: Message) {
         let message = if let Some(security) = &mut self.security {
-            security.encode_new(message)
+            security.encode(message)
         } else {
             message
         };

@@ -61,6 +61,16 @@ impl SecretContext {
             .map(|r| calculate_key(self.shared_secret().unwrap(), r, self.local_public()))
             .ok_or(RemotePublicNotSet)
     }
+
+    pub fn final_key(&self) -> Result<BlowfishKey, RemotePublicNotSet> {
+        let mut key = BlowfishKey::default();
+        key.copy_from_slice(self.initial_key.as_slice());
+
+        self.shared_secret().map(|secret| {
+            transform_value(key.as_mut(), secret, 3);
+            key
+        })
+    }
 }
 
 /// A signature that is used to verify a successful secret exchange

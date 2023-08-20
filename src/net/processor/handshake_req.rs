@@ -1,8 +1,9 @@
 use crate::net::message::MessageDirection::{Ack, Req};
 use crate::net::message::{Header, Message, MessageDirection, MessageId, MessageKind};
 use crate::net::{MessageTable, NetClient, Process};
-use crate::security::{BlowfishKey, SecretContext, SecurityBuilder, Signature};
+use crate::security::{BlowfishKey, SecretContext, Security, SecurityBuilder, Signature};
 use bitfield_struct::bitfield;
+use blowfish_compat::{BlowfishCompat, NewBlockCipher};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 #[bitfield(u8)]
@@ -84,81 +85,120 @@ impl Process for HandshakeReqProcessor {
         let mut reader = m.reader();
 
         let options = HandshakeOptions::from(reader.get_u8());
-        let mut security_builder = SecurityBuilder::default();
 
-        if options.encryption() {
-            let mut key_buffer = BlowfishKey::default();
-            reader.copy_to_slice(key_buffer.as_mut_slice());
-            security_builder = security_builder.blowfish(key_buffer);
+        if options.challenge() {
+            self.process_challenge(net_client, reader);
         }
+        else {
+            let mut security_builder = SecurityBuilder::default();
 
-        if options.error_detection() {
-            let error_detection = ErrorDetectionSeed::from(reader.copy_to_bytes(8));
-            security_builder = security_builder
-                .error_detection((error_detection.sequence, error_detection.checksum));
-        }
+            if options.encryption() {
+                let mut key_buffer = BlowfishKey::default();
+                reader.copy_to_slice(key_buffer.as_mut_slice());
+                security_builder = security_builder.blowfish(key_buffer);
+            }
 
-        let (response, security) = if options.exchange() {
-            let setup = ExchangeSetup::from(reader.copy_to_bytes(20));
-            let secret_context = SecretContext::new(
-                setup.initial_key,
-                setup.generator,
-                setup.prime,
-                rand::random(),
-                Some(setup.public),
-            );
+            if options.error_detection() {
+                let error_detection = ErrorDetectionSeed::from(reader.copy_to_bytes(8));
+                security_builder = security_builder
+                    .error_detection((error_detection.sequence, error_detection.checksum));
+            }
 
-            security_builder = security_builder.blowfish(
-                secret_context
-                    .intermediary_key()
-                    .expect("we can safely unwrap as the remote public should be set above"),
-            );
-            let security = security_builder.build();
+            let (response, security) = if options.exchange() {
+                let setup = ExchangeSetup::from(reader.copy_to_bytes(20));
+                let secret_context = SecretContext::new(
+                    setup.initial_key,
+                    setup.generator,
+                    setup.prime,
+                    rand::random(),
+                    Some(setup.public),
+                );
 
-            let mut signature = secret_context
-                .local_signature()
-                .expect("we can safely unwrap as the remote public should be set above");
+                security_builder = security_builder.blowfish(
+                    secret_context
+                        .intermediary_key()
+                        .expect("we can safely unwrap as the remote public should be set above"),
+                );
+                let security = security_builder.build();
 
-            security.encrypt(&mut signature);
+                let mut signature = secret_context
+                    .local_signature()
+                    .expect("we can safely unwrap as the remote public should be set above");
 
-            let response = ExchangeResponse {
-                signature,
-                local_public: secret_context.local_public(),
+                security.encrypt(&mut signature);
+
+                let response = ExchangeResponse {
+                    signature,
+                    local_public: secret_context.local_public(),
+                };
+
+                self.secret_context = Some(secret_context);
+
+                let mem: Bytes = response.into();
+                (
+                    Message::new(
+                        Header::new(
+                            MessageId::new()
+                                .with_operation(0)
+                                .with_kind(MessageKind::NetEngine)
+                                .with_direction(Req),
+                            mem.len() as u16,
+                        ),
+                        mem,
+                    ),
+                    security,
+                )
+            } else {
+                (
+                    Message::new(
+                        Header::new(
+                            MessageId::new()
+                                .with_operation(0)
+                                .with_kind(MessageKind::NetEngine)
+                                .with_direction(Ack),
+                            0,
+                        ),
+                        Bytes::new(),
+                    ),
+                    security_builder.build(),
+                )
             };
 
-            self.secret_context = Some(secret_context);
+            net_client.set_security(security);
+            net_client.send(response);
+        }
+    }
+}
 
-            let mem: Bytes = response.into();
-            (
-                Message::new(
-                    Header::new(
-                        MessageId::new()
-                            .with_operation(0)
-                            .with_kind(MessageKind::NetEngine)
-                            .with_direction(Req),
-                        mem.len() as u16,
-                    ),
-                    mem,
-                ),
-                security,
-            )
-        } else {
-            (
-                Message::new(
-                    Header::new(
-                        MessageId::new()
-                            .with_operation(0)
-                            .with_kind(MessageKind::NetEngine)
-                            .with_direction(Ack),
-                        0,
-                    ),
-                    Bytes::new(),
-                ),
-                security_builder.build(),
-            )
-        };
+impl HandshakeReqProcessor {
+    fn process_challenge(&mut self, net_client: &mut NetClient, mut reader: Bytes) {
+        let secret_context = self.secret_context.as_ref().expect("asdf");
+        let mut given_remote_signature = Signature::default();
+        reader.copy_to_slice(&mut given_remote_signature);
 
-        net_client.set_security(security);
-        net_client.send(response);
+        let calculated_remote_signature = secret_context.remote_signature().expect("asdf");
+
+        // todo: handle gracefully and disconnect client
+        assert_eq!(
+            calculated_remote_signature, given_remote_signature,
+            "remote signature missmatch"
+        );
+
+        let final_key = secret_context.final_key().expect("asdf");
+        if let Some(security) = net_client.security_mut() {
+            security.blowfish =
+                Some(BlowfishCompat::new_from_slice(final_key.as_slice()).expect("asdf"));
+        }
+
+        net_client.send(Message::new(
+            Header::new(
+                MessageId::new()
+                    .with_operation(0)
+                    .with_kind(MessageKind::NetEngine)
+                    .with_direction(Ack),
+                0,
+            ),
+            Bytes::new(),
+        ));
     }
 }

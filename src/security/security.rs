@@ -9,26 +9,20 @@ struct Encoder {
 }
 
 pub struct Security {
-    blowfish: Option<BlowfishCompat>,
+    pub(crate) blowfish: Option<BlowfishCompat>,
     encoder: Option<Encoder>,
 }
 
 impl Security {
-    pub fn encode(&mut self, data: &[u8]) -> Option<(u8, u8)> {
-        self.encoder.as_mut().map_or(None, |e| {
-            Some((e.sequencer.next(), e.checksum.compute(data, data.len())))
-        })
-    }
-
-    pub fn encode_new(&mut self, message: Message) -> Message {
+    pub fn encode(&mut self, mut message: Message) -> Message {
         if let Some(encoder) = &mut self.encoder {
-            let sequence = encoder.sequencer.next();
+            message.header_mut().sequence = encoder.sequencer.next();
 
             let bytes: Bytes = message.into();
             let checksum = encoder.checksum.compute(bytes.as_ref(), bytes.len());
 
             let mut message = Message::from(bytes);
-            // message.header_mut().sequence = sequence;
+
             message.header_mut().checksum = checksum;
 
             message
