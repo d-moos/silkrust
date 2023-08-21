@@ -6,7 +6,7 @@ pub struct Checksum {
 impl Checksum {
     pub fn new(seed: u32) -> Self {
         Self {
-            seed,
+            seed: seed << 8,
             table: Checksum::generate_table(),
         }
     }
@@ -88,5 +88,23 @@ impl Checksum {
         }
 
         final_table
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::security::Checksum;
+
+    #[test]
+    fn compare_new_with_known_impl() {
+        assert_eq!(Checksum::new(50).seed, 12800);
+    }
+
+    #[test]
+    fn compare_compute_with_known_impl() {
+        let checksum = Checksum::new(50);
+        let data = &[1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8];
+
+        assert_eq!(checksum.compute(data, 8), 147);
     }
 }

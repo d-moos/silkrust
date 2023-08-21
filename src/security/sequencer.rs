@@ -17,18 +17,18 @@ impl Sequencer {
         let mut byte1: u8 = ((mut1 & 0xFF) ^ (mut2 & 0xFF)) as u8;
         byte1 = if byte1 == 0 { 1 } else { byte1 };
 
-        let mut byte2: u8 = ((mut3 & 0xFF) ^ (mut4 & 0xFF)) as u8;
+        let mut byte2: u8 = ((mut4 & 0xFF) ^ (mut3 & 0xFF)) as u8;
         byte2 = if byte2 == 0 { 1 } else { byte2 };
 
         Self {
             byte0: byte2 ^ byte1,
             byte1,
-            byte2
+            byte2,
         }
     }
 
     pub fn next(&mut self) -> u8 {
-        let value = self.byte2 as u32 * (!self.byte0 as u32 + self.byte1 as u32);
+        let value = (self.byte2 as u32 * (!self.byte0 as u32 + self.byte1 as u32)) as u8;
         self.byte0 = (value ^ value >> 4) as u8;
 
         self.byte0
@@ -47,4 +47,38 @@ fn generate_value(mut value: u32) -> u32 {
     }
 
     value
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::security::sequencer::generate_value;
+    use crate::security::Sequencer;
+
+    #[test]
+    fn compare_init_with_known_sequencer_impl() {
+        let sequencer = Sequencer::new(0x12345678);
+
+        assert_eq!(sequencer.byte0, 129);
+        assert_eq!(sequencer.byte1, 114);
+        assert_eq!(sequencer.byte2, 243);
+    }
+
+    #[test]
+    fn compare_next_with_known_sequencer_impl() {
+        let mut sequencer = Sequencer::new(0x1234);
+
+        assert_eq!(sequencer.next(), 4);
+        assert_eq!(sequencer.next(), 222);
+    }
+
+    #[test]
+    fn compare_generate_value_with_known_sequencer_impl() {
+        let value = 0x12345678;
+
+        let m0 = generate_value(value);
+        let m1 = generate_value(m0);
+
+        assert_eq!(m0, 1706579037);
+        assert_eq!(m1, 1019020591);
+    }
 }
