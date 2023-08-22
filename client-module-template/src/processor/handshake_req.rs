@@ -1,10 +1,10 @@
 use bitfield_struct::bitfield;
 use blowfish_compat::{BlowfishCompat, NewBlockCipher};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use silkrust::net::message::MessageDirection::{Ack, Req};
 use silkrust::net::message::{Header, Message, MessageId, MessageKind};
 use silkrust::net::{NetClient, Process};
-use silkrust::net::message::MessageDirection::{Ack, Req};
-use silkrust::security::{BlowfishKey, SecretContext, SecurityBuilder, Signature};
+use silkrust::security::{BlowfishKey, SecretContext, Security, SecurityBuilder, Signature};
 
 #[bitfield(u8)]
 struct HandshakeOptions {
@@ -90,77 +90,13 @@ impl Process for HandshakeReqProcessor {
             self.process_challenge(net_client, reader);
         } else {
             let mut security_builder = SecurityBuilder::default();
-
-            if options.encryption() {
-                let mut key_buffer = BlowfishKey::default();
-                reader.copy_to_slice(key_buffer.as_mut_slice());
-                security_builder = security_builder.blowfish(key_buffer);
-            }
-
-            if options.error_detection() {
-                let error_detection = ErrorDetectionSeed::from(reader.copy_to_bytes(8));
-                security_builder = security_builder
-                    .error_detection((error_detection.sequence, error_detection.checksum));
-            }
+            security_builder = self.handle_encryption(options, &mut reader, security_builder);
+            security_builder = self.handle_error_detection(options, &mut reader, security_builder);
 
             let (response, security) = if options.exchange() {
-                let setup = ExchangeSetup::from(reader.copy_to_bytes(20));
-                let secret_context = SecretContext::new(
-                    setup.initial_key,
-                    setup.generator,
-                    setup.prime,
-                    rand::random(),
-                    Some(setup.public),
-                );
-
-                security_builder = security_builder.blowfish(
-                    secret_context
-                        .intermediary_key()
-                        .expect("we can safely unwrap as the remote public should be set above"),
-                );
-                let security = security_builder.build();
-
-                let mut signature = secret_context
-                    .local_signature()
-                    .expect("we can safely unwrap as the remote public should be set above");
-
-                security.encrypt(&mut signature);
-
-                let response = ExchangeResponse {
-                    signature,
-                    local_public: secret_context.local_public(),
-                };
-
-                self.secret_context = Some(secret_context);
-
-                let mem: Bytes = response.into();
-                (
-                    Message::new(
-                        Header::new(
-                            MessageId::new()
-                                .with_operation(0)
-                                .with_kind(MessageKind::NetEngine)
-                                .with_direction(Req),
-                            mem.len() as u16,
-                        ),
-                        mem,
-                    ),
-                    security,
-                )
+                self.handle_exchange(security_builder, &mut reader)
             } else {
-                (
-                    Message::new(
-                        Header::new(
-                            MessageId::new()
-                                .with_operation(0)
-                                .with_kind(MessageKind::NetEngine)
-                                .with_direction(Ack),
-                            0,
-                        ),
-                        Bytes::new(),
-                    ),
-                    security_builder.build(),
-                )
+                self.handle_no_exchange(security_builder)
             };
 
             net_client.set_security(security);
@@ -170,6 +106,101 @@ impl Process for HandshakeReqProcessor {
 }
 
 impl HandshakeReqProcessor {
+    fn handle_encryption(
+        &self,
+        options: HandshakeOptions,
+        reader: &mut Bytes,
+        security_builder: SecurityBuilder,
+    ) -> SecurityBuilder {
+        if options.encryption() {
+            let mut key_buffer = BlowfishKey::default();
+            reader.copy_to_slice(key_buffer.as_mut_slice());
+            return security_builder.blowfish(key_buffer);
+        }
+        security_builder
+    }
+
+    fn handle_error_detection(
+        &self,
+        options: HandshakeOptions,
+        reader: &mut Bytes,
+        security_builder: SecurityBuilder,
+    ) -> SecurityBuilder {
+        if options.error_detection() {
+            let error_detection = ErrorDetectionSeed::from(reader.copy_to_bytes(8));
+            return security_builder
+                .error_detection((error_detection.sequence, error_detection.checksum));
+        }
+
+        security_builder
+    }
+
+    fn handle_exchange(
+        &mut self,
+        mut security_builder: SecurityBuilder,
+        reader: &mut Bytes,
+    ) -> (Message, Security) {
+        let setup = ExchangeSetup::from(reader.copy_to_bytes(20));
+        let secret_context = SecretContext::new(
+            setup.initial_key,
+            setup.generator,
+            setup.prime,
+            rand::random(),
+            Some(setup.public),
+        );
+
+        security_builder = security_builder.blowfish(
+            secret_context
+                .intermediary_key()
+                .expect("we can safely unwrap as the remote public should be set above"),
+        );
+        let security = security_builder.build();
+
+        let mut signature = secret_context
+            .local_signature()
+            .expect("we can safely unwrap as the remote public should be set above");
+
+        security.encrypt(&mut signature);
+
+        let response = ExchangeResponse {
+            signature,
+            local_public: secret_context.local_public(),
+        };
+
+        self.secret_context = Some(secret_context);
+
+        let mem: Bytes = response.into();
+        (
+            Message::new(
+                Header::new(
+                    MessageId::new()
+                        .with_operation(0)
+                        .with_kind(MessageKind::NetEngine)
+                        .with_direction(Req),
+                    mem.len() as u16,
+                ),
+                mem,
+            ),
+            security,
+        )
+    }
+
+    fn handle_no_exchange(&self, mut security_builder: SecurityBuilder) -> (Message, Security) {
+        (
+            Message::new(
+                Header::new(
+                    MessageId::new()
+                        .with_operation(0)
+                        .with_kind(MessageKind::NetEngine)
+                        .with_direction(Ack),
+                    0,
+                ),
+                Bytes::new(),
+            ),
+            security_builder.build(),
+        )
+    }
+
     fn process_challenge(&mut self, net_client: &mut NetClient, mut reader: Bytes) {
         let secret_context = self.secret_context.as_ref().expect("asdf");
         let mut given_remote_signature = Signature::default();

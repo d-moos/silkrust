@@ -5,6 +5,7 @@ use silkrust::net::{NetClient, Process};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use log::{info, trace};
 
+#[derive(Default)]
 pub struct NetPing;
 
 impl Process for NetPing {

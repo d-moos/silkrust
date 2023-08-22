@@ -6,11 +6,48 @@ use crate::net::NetConnection;
 use crate::security::Security;
 use bitfield_struct::bitfield;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use log::{error, trace, warn};
 use std::collections::HashMap;
 use std::time::Duration;
-use log::{error, trace, warn};
 use tokio::io::AsyncReadExt;
 use tokio::time::sleep;
+
+#[macro_export]
+macro_rules! construct_processor_table {
+    // use a given instance (used when the processor is stateful)
+    ($($kind:ident, $dir:ident, $op:literal = $proc:ident = $instance:expr),* $(,)?) => {
+        {
+            let mut m_table = MessageTable::new();
+            $(
+                m_table.insert(
+                    $crate::net::message::MessageId::new()
+                        .with_operation($op)
+                        .with_kind($crate::net::message::MessageKind::$kind)
+                        .with_direction($crate::net::message::MessageDirection::$dir),
+                    Box::new($instance),
+                );
+            )*
+            m_table
+        }
+    };
+
+    // use a default implementation (used when the processor is stateless
+    ($($kind:ident, $dir:ident, $op:literal = $proc:ident),* $(,)?) => {
+        {
+            let mut m_table = MessageTable::new();
+            $(
+                m_table.insert(
+                   $crate::net::message::MessageId::new()
+                        .with_operation($op)
+                        .with_kind($crate::net::message::MessageKind::$kind)
+                        .with_direction($crate::net::message::MessageDirection::$dir),
+                    Box::new($proc::default()),
+                );
+            )*
+            m_table
+        }
+    };
+}
 
 pub type MessageTable = HashMap<MessageId, Box<dyn Process>>;
 
@@ -72,9 +109,7 @@ impl NetClient {
         }
 
         match massive_buffer.add(m) {
-            Ok(_) => {
-                massive_buffer.collect()
-            }
+            Ok(_) => massive_buffer.collect(),
             Err(e) => {
                 error!("could not add massive message to buffer! ({:?})", e);
                 None

@@ -35,6 +35,7 @@ impl Into<Bytes> for Module {
     }
 }
 
+#[derive(Default)]
 pub struct ModuleIdentification;
 
 impl Process for ModuleIdentification {
