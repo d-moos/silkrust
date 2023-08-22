@@ -1,10 +1,10 @@
-use crate::net::message::MessageDirection::{Ack, Req};
-use crate::net::message::{Header, Message, MessageDirection, MessageId, MessageKind};
-use crate::net::{MessageTable, NetClient, Process};
-use crate::security::{BlowfishKey, SecretContext, Security, SecurityBuilder, Signature};
 use bitfield_struct::bitfield;
 use blowfish_compat::{BlowfishCompat, NewBlockCipher};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use silkrust::net::message::{Header, Message, MessageId, MessageKind};
+use silkrust::net::{NetClient, Process};
+use silkrust::net::message::MessageDirection::{Ack, Req};
+use silkrust::security::{BlowfishKey, SecretContext, SecurityBuilder, Signature};
 
 #[bitfield(u8)]
 struct HandshakeOptions {

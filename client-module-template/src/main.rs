@@ -1,7 +1,10 @@
 use silkrust::net::message::{Header, Message, MessageDirection, MessageId, MessageKind};
 use silkrust::net::{MessageTable, NetClient, Process};
 use std::collections::HashMap;
-use silkrust::net::processor::{HandshakeReqProcessor, ModuleIdentification, NetPing};
+use crate::processor::{HandshakeReqProcessor, ModuleIdentification, NetPing};
+
+
+mod processor;
 
 #[tokio::main]
 async fn main() {

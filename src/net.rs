@@ -11,7 +11,4 @@ mod net_connection;
 pub use self::net_client::{MessageTable, NetClient, Process};
 mod net_client;
 
-/// Net Engine Processors
-pub mod processor;
-
 mod massive;

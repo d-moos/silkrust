@@ -7,9 +7,10 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.26.0", features = ["full"] }
-bitfield-struct = "0.5"
 bytes = "1.4.0"
 silkrust = { path = "../" }
 rand = "0.8.5"
 env_logger = "0.10.0"
 log = "0.4.17"
+blowfish-compat = { git = "https://git.eternalwings.de/tim/blowfish-compat.rs.git", branch = "master" }
+bitfield-struct = "0.5"

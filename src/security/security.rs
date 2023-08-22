@@ -10,7 +10,7 @@ struct Encoder {
 }
 
 pub struct Security {
-    pub(crate) blowfish: Option<BlowfishCompat>,
+    pub blowfish: Option<BlowfishCompat>,
     encoder: Option<Encoder>,
 }
 
