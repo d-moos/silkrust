@@ -3,7 +3,6 @@ use crate::net::message::kind::MessageKind;
 use bitfield_struct::bitfield;
 use std::fmt::{Display, Formatter};
 
-
 /// The message Id (also known as "Header")
 ///
 /// the message id consists of a 2-bit [MessageDirection], a 2-bit [MessageKind] and a 12-bit

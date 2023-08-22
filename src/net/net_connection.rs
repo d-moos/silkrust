@@ -2,6 +2,7 @@ use queues::{IsQueue, Queue};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 use bytes::Bytes;
+use log::trace;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
@@ -90,7 +91,7 @@ impl NetConnection {
             let messages = message_buffer.read(net_buffer, len);
             let mut inbound_queue = inbound.lock().map_err(|_| ())?;
             for message in messages {
-                println!("IN:  {}", message);
+                trace!("IN:  {}", message);
                 inbound_queue.add(message).map_err(|_| ())?;
             }
         }
@@ -111,7 +112,7 @@ impl NetConnection {
             };
 
             for message in messages {
-                println!("OUT: {}", message);
+                trace!("OUT: {}", message);
                 let b: Bytes = message.into();
                 stream.write(b.as_ref()).await.map_err(|_| ())?;
             }

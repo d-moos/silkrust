@@ -1,12 +1,16 @@
-use crate::net::message::{Message, MessageId};
+use crate::net::massive::{MassiveBuffer, MassiveError};
+use crate::net::message::MessageDirection::Req;
+use crate::net::message::MessageKind::Framework;
+use crate::net::message::{Header, Message, MessageId};
 use crate::net::NetConnection;
+use crate::security::Security;
+use bitfield_struct::bitfield;
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::collections::HashMap;
 use std::time::Duration;
-use bitfield_struct::bitfield;
-use bytes::Bytes;
+use log::{error, trace, warn};
 use tokio::io::AsyncReadExt;
 use tokio::time::sleep;
-use crate::security::Security;
 
 pub type MessageTable = HashMap<MessageId, Box<dyn Process>>;
 
@@ -16,7 +20,8 @@ pub trait Process {
 
 pub struct NetClient {
     connection: NetConnection,
-    security: Option<Security>
+    massive_buffer: MassiveBuffer,
+    security: Option<Security>,
 }
 
 impl NetClient {
@@ -24,7 +29,8 @@ impl NetClient {
         let connection = NetConnection::open(addr).await?;
         Ok(Self {
             connection,
-            security: None
+            massive_buffer: MassiveBuffer::default(),
+            security: None,
         })
     }
 
@@ -41,21 +47,38 @@ impl NetClient {
             if let Some(m) = self.connection.take().unwrap() {
                 // decrypt
 
-
                 // massive buffer
-
-
-                // TODO: should a processor be stateful? yes, e.g. Handshake Exchange?
-                // no? how can we solve the exchange problem differently? RefCell?
-                // store exchange on Client? rather not.
-                if let Some(processor) = message_table.get_mut(m.header().id()) {
-                    processor.process(self, m);
-                } else {
-                    println!("unknown messageId");
+                if let Some(m) = NetClient::massive_check(m, &mut self.massive_buffer) {
+                    if let Some(processor) = message_table.get_mut(m.header().id()) {
+                        processor.process(self, m);
+                    } else {
+                        warn!("no processor found for {}", m.header().id());
+                    }
                 }
             }
 
             sleep(Duration::from_millis(10)).await;
+        }
+    }
+
+    fn massive_check(m: Message, massive_buffer: &mut MassiveBuffer) -> Option<Message> {
+        if m.header().id()
+            != &MessageId::new()
+                .with_kind(Framework)
+                .with_direction(Req)
+                .with_operation(13)
+        {
+            return Some(m);
+        }
+
+        match massive_buffer.add(m) {
+            Ok(_) => {
+                massive_buffer.collect()
+            }
+            Err(e) => {
+                error!("could not add massive message to buffer! ({:?})", e);
+                None
+            }
         }
     }
 

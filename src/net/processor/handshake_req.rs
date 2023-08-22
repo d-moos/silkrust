@@ -88,8 +88,7 @@ impl Process for HandshakeReqProcessor {
 
         if options.challenge() {
             self.process_challenge(net_client, reader);
-        }
-        else {
+        } else {
             let mut security_builder = SecurityBuilder::default();
 
             if options.encryption() {
@@ -176,8 +175,10 @@ impl HandshakeReqProcessor {
         let mut given_remote_signature = Signature::default();
         reader.copy_to_slice(&mut given_remote_signature);
 
-        let calculated_remote_signature = secret_context.remote_signature().expect("asdf");
-
+        let mut calculated_remote_signature = secret_context.remote_signature().expect("asdf");
+        if let Some(security) = net_client.security_mut() {
+            security.encrypt(calculated_remote_signature.as_mut_slice());
+        }
         // todo: handle gracefully and disconnect client
         assert_eq!(
             calculated_remote_signature, given_remote_signature,

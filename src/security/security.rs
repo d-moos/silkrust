@@ -1,6 +1,7 @@
 use crate::security::{BlowfishKey, Checksum, Sequencer};
 use blowfish_compat::{Block, BlockEncrypt, BlowfishCompat, NewBlockCipher};
 use bytes::Bytes;
+use log::warn;
 use crate::net::message::Message;
 
 struct Encoder {
@@ -35,8 +36,7 @@ impl Security {
         if let Some(blowfish) = self.blowfish {
             blowfish.encrypt_block(Block::from_mut_slice(data));
         } else {
-            println!("encrypt called with unitialized blowfish!");
-            // TODO: warn that there is no blowfish initialized!
+            warn!("encrypt called with uninitialized blowfish!");
         }
     }
 }
