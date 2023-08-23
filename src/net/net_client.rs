@@ -1,7 +1,7 @@
 use crate::net::massive::{MassiveBuffer, MassiveError};
 use crate::net::message::MessageDirection::Req;
 use crate::net::message::MessageKind::Framework;
-use crate::net::message::{Header, Message, MessageId};
+use crate::net::message::{Header, Message, MessageDirection, MessageId, MessageKind};
 use crate::net::NetConnection;
 use crate::security::Security;
 use bitfield_struct::bitfield;
@@ -15,7 +15,7 @@ use tokio::time::sleep;
 #[macro_export]
 macro_rules! construct_processor_table {
     // use a given instance (used when the processor is stateful)
-    ($($kind:ident, $dir:ident, $op:literal = $proc:ident = $instance:expr),* $(,)?) => {
+    ($($kind:ident, $op:expr, $dir:ident = $proc:ident = $instance:expr),* $(,)?) => {
         {
             let mut m_table = MessageTable::new();
             $(
@@ -32,7 +32,7 @@ macro_rules! construct_processor_table {
     };
 
     // use a default implementation (used when the processor is stateless
-    ($($kind:ident, $dir:ident, $op:literal = $proc:ident),* $(,)?) => {
+    ($($kind:ident, $op:expr, $dir:ident = $proc:ident),* $(,)?) => {
         {
             let mut m_table = MessageTable::new();
             $(

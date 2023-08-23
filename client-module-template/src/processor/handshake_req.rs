@@ -2,6 +2,7 @@ use bitfield_struct::bitfield;
 use blowfish_compat::{BlowfishCompat, NewBlockCipher};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use silkrust::net::message::MessageDirection::{Ack, Req};
+use silkrust::net::message::MessageKind::NetEngine;
 use silkrust::net::message::{Header, Message, MessageId, MessageKind};
 use silkrust::net::{NetClient, Process};
 use silkrust::security::{BlowfishKey, SecretContext, Security, SecurityBuilder, Signature};
@@ -170,33 +171,12 @@ impl HandshakeReqProcessor {
         self.secret_context = Some(secret_context);
 
         let mem: Bytes = response.into();
-        (
-            Message::new(
-                Header::new(
-                    MessageId::new()
-                        .with_operation(0)
-                        .with_kind(MessageKind::NetEngine)
-                        .with_direction(Req),
-                    mem.len() as u16,
-                ),
-                mem,
-            ),
-            security,
-        )
+        (Message::new(Req, NetEngine, 0, mem), security)
     }
 
     fn handle_no_exchange(&self, mut security_builder: SecurityBuilder) -> (Message, Security) {
         (
-            Message::new(
-                Header::new(
-                    MessageId::new()
-                        .with_operation(0)
-                        .with_kind(MessageKind::NetEngine)
-                        .with_direction(Ack),
-                    0,
-                ),
-                Bytes::new(),
-            ),
+            Message::new(Ack, NetEngine, 0, Bytes::new()),
             security_builder.build(),
         )
     }
@@ -222,15 +202,6 @@ impl HandshakeReqProcessor {
                 Some(BlowfishCompat::new_from_slice(final_key.as_slice()).expect("asdf"));
         }
 
-        net_client.send(Message::new(
-            Header::new(
-                MessageId::new()
-                    .with_operation(0)
-                    .with_kind(MessageKind::NetEngine)
-                    .with_direction(Ack),
-                0,
-            ),
-            Bytes::new(),
-        ));
+        net_client.send(Message::new(Ack, NetEngine, 0, Bytes::new()));
     }
 }

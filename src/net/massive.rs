@@ -77,10 +77,10 @@ impl MassiveBuffer {
 
             trace!("massive collected into: {}", header.id);
 
-            Some(Message::new(
+            Some(Message::from((
                 Header::new(header.id, data.len() as u16),
                 data.freeze(),
-            ))
+            )))
         } else {
             None
         }

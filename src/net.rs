@@ -12,3 +12,5 @@ pub use self::net_client::{MessageTable, NetClient, Process};
 mod net_client;
 
 mod massive;
+
+pub mod io;

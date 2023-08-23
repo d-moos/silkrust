@@ -1,10 +1,10 @@
-use silkrust::net::message::MessageDirection::NoDir;
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use log::info;
+use silkrust::net::message::MessageDirection::{NoDir, Req};
 use silkrust::net::message::MessageKind::Framework;
 use silkrust::net::message::{Header, Message, MessageId};
 use silkrust::net::{NetClient, Process};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use log::info;
-
+use crate::processor::message_ops::framework::{MODULE_IDENTIFICATION, SHARD_LIST};
 
 struct Module {
     servicename: String,
@@ -49,18 +49,9 @@ impl Process for ModuleIdentification {
             servicename: String::from("SR_CLIENT"),
         };
 
-        info!("we are {}", response.servicename);
-
         let mem: Bytes = response.into();
-        net_client.send(Message::new(
-            Header::new(
-                MessageId::new()
-                    .with_operation(1)
-                    .with_kind(Framework)
-                    .with_direction(NoDir),
-                mem.len() as u16,
-            ),
-            mem,
-        ))
+
+        net_client.send(Message::new(NoDir, Framework, MODULE_IDENTIFICATION, mem));
+        net_client.send(Message::new(Req, Framework, SHARD_LIST, Bytes::new()));
     }
 }

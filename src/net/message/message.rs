@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use crate::net::message::header::Header;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crate::net::message::{HEADER_SIZE, MessageId};
+use crate::net::message::{HEADER_SIZE, MessageDirection, MessageId, MessageKind};
 use crate::security::Security;
 
 pub const MAX_MESSAGE_SIZE: usize = 4096;
@@ -13,9 +13,15 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new(header: Header, data: Bytes) -> Self {
+    pub fn new(dir: MessageDirection, kind: MessageKind, op: usize, data: Bytes) -> Self {
         Self {
-            header,
+            header: Header::new(
+                MessageId::new()
+                    .with_kind(kind)
+                    .with_direction(dir)
+                    .with_operation(op),
+                data.len() as u16,
+            ),
             data
         }
     }
@@ -39,6 +45,15 @@ impl Display for Message {
             self.header,
             self.data
         )
+    }
+}
+
+impl From<(Header, Bytes)> for Message {
+    fn from(value: (Header, Bytes)) -> Self {
+        Self {
+            header: value.0,
+            data: value.1
+        }
     }
 }
 
