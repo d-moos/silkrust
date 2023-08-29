@@ -4,6 +4,7 @@ use silkrust::net::message::MessageDirection::{NoDir, Req};
 use silkrust::net::message::MessageKind::Framework;
 use silkrust::net::message::{Header, Message, MessageId};
 use silkrust::net::{NetClient, Process};
+use silkrust::net::io::BytesExtension;
 use crate::processor::message_ops::framework::{MODULE_IDENTIFICATION, SHARD_LIST};
 
 struct Module {
@@ -13,11 +14,8 @@ struct Module {
 
 impl From<Bytes> for Module {
     fn from(mut value: Bytes) -> Self {
-        let len = value.get_u16_le() as usize;
-        let mut name_buffer = vec![0u8; len];
-        value.copy_to_slice(&mut name_buffer);
         Self {
-            servicename: String::from_utf8(name_buffer).unwrap(),
+            servicename: value.get_string().expect("todo"),
             is_local: value.get_u8() == 1,
         }
     }
@@ -42,7 +40,7 @@ impl Process for ModuleIdentification {
     fn process(&mut self, net_client: &mut NetClient, m: Message) {
         let module = Module::from(m.reader());
 
-        info!("opposite module is {}", module.servicename);
+        info!("opposing module is {}", module.servicename);
 
         let response = Module {
             is_local: false,

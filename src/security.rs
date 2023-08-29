@@ -9,3 +9,5 @@ mod security;
 
 pub use self::secret_context::{BlowfishKey, Signature, SecretContext, RemotePublicNotSet};
 mod secret_context;
+
+pub mod blowfish_compat;

@@ -1,3 +1,4 @@
+use crate::processor::message_ops::framework::KEEP_ALIVE;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use log::{info, trace};
 use silkrust::net::message::MessageDirection::NoDir;
@@ -12,7 +13,6 @@ impl Process for NetPing {
     fn process(&mut self, net_client: &mut NetClient, _: Message) {
         trace!("PONG");
 
-        const KEEP_ALIVE: usize = 2;
-        net_client.send(Message::new(NoDir, Framework, 2, Bytes::new()));
+        net_client.send(Message::new(NoDir, Framework, KEEP_ALIVE, Bytes::new()));
     }
 }

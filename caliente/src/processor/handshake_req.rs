@@ -1,11 +1,12 @@
 use bitfield_struct::bitfield;
-use blowfish_compat::{BlowfishCompat, NewBlockCipher};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use silkrust::net::message::MessageDirection::{Ack, Req};
 use silkrust::net::message::MessageKind::NetEngine;
 use silkrust::net::message::{Header, Message, MessageId, MessageKind};
 use silkrust::net::{NetClient, Process};
 use silkrust::security::{BlowfishKey, SecretContext, Security, SecurityBuilder, Signature};
+use silkrust::security::blowfish_compat::{BlowfishCompat, NewBlockCipher};
+use crate::processor::message_ops::net_engine::HANDSHAKE;
 
 #[bitfield(u8)]
 struct HandshakeOptions {
@@ -171,22 +172,22 @@ impl HandshakeReqProcessor {
         self.secret_context = Some(secret_context);
 
         let mem: Bytes = response.into();
-        (Message::new(Req, NetEngine, 0, mem), security)
+        (Message::new(Req, NetEngine, HANDSHAKE, mem), security)
     }
 
     fn handle_no_exchange(&self, mut security_builder: SecurityBuilder) -> (Message, Security) {
         (
-            Message::new(Ack, NetEngine, 0, Bytes::new()),
+            Message::new(Ack, NetEngine, HANDSHAKE, Bytes::new()),
             security_builder.build(),
         )
     }
 
     fn process_challenge(&mut self, net_client: &mut NetClient, mut reader: Bytes) {
-        let secret_context = self.secret_context.as_ref().expect("asdf");
+        let secret_context = self.secret_context.as_ref().expect("todo");
         let mut given_remote_signature = Signature::default();
         reader.copy_to_slice(&mut given_remote_signature);
 
-        let mut calculated_remote_signature = secret_context.remote_signature().expect("asdf");
+        let mut calculated_remote_signature = secret_context.remote_signature().expect("todo");
         if let Some(security) = net_client.security_mut() {
             security.encrypt(calculated_remote_signature.as_mut_slice());
         }
@@ -196,12 +197,12 @@ impl HandshakeReqProcessor {
             "remote signature missmatch"
         );
 
-        let final_key = secret_context.final_key().expect("asdf");
+        let final_key = secret_context.final_key().expect("todo");
         if let Some(security) = net_client.security_mut() {
             security.blowfish =
-                Some(BlowfishCompat::new_from_slice(final_key.as_slice()).expect("asdf"));
+                Some(BlowfishCompat::new_from_slice(final_key.as_slice()).expect("todo"));
         }
 
-        net_client.send(Message::new(Ack, NetEngine, 0, Bytes::new()));
+        net_client.send(Message::new(Ack, NetEngine, HANDSHAKE, Bytes::new()));
     }
 }

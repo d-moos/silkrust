@@ -1,6 +1,6 @@
 /target
-/client-module-template/target
-/client-module-template/Cargo.lock
+/caliente/target
+/caliente/Cargo.lock
 /Cargo.lock
 
 .idea/

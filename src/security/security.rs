@@ -1,8 +1,8 @@
 use crate::security::{BlowfishKey, Checksum, Sequencer};
-use blowfish_compat::{Block, BlockEncrypt, BlowfishCompat, NewBlockCipher};
 use bytes::Bytes;
 use log::warn;
 use crate::net::message::Message;
+use crate::security::blowfish_compat::{Block, BlockEncrypt, BlowfishCompat, NewBlockCipher};
 
 struct Encoder {
     sequencer: Sequencer,

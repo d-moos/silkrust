@@ -1,12 +1,11 @@
-use crate::net::massive::{MassiveBuffer, MassiveError};
+use crate::net::massive::MassiveBuffer;
 use crate::net::message::MessageDirection::Req;
 use crate::net::message::MessageKind::Framework;
-use crate::net::message::{Header, Message, MessageDirection, MessageId, MessageKind};
+use crate::net::message::{Message, MessageId};
 use crate::net::NetConnection;
 use crate::security::Security;
-use bitfield_struct::bitfield;
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use log::{error, trace, warn};
+use bytes::{Buf, BufMut};
+use log::{error, warn};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
@@ -79,24 +78,45 @@ impl NetClient {
         &mut self.security
     }
 
-    pub async fn run(&mut self, mut message_table: MessageTable) {
-        loop {
-            if let Some(m) = self.connection.take().unwrap() {
-                // decrypt
+    pub async fn process_messages(&mut self, message_table: &mut MessageTable, limit: usize) {
+        let mut counter = 0;
+        while let Some(m) = self.connection.take().unwrap() {
+            // decrypt
 
-                // massive buffer
-                if let Some(m) = NetClient::massive_check(m, &mut self.massive_buffer) {
-                    if let Some(processor) = message_table.get_mut(m.header().id()) {
-                        processor.process(self, m);
-                    } else {
-                        warn!("no processor found for {}", m.header().id());
-                    }
+            // massive buffer
+            if let Some(m) = NetClient::massive_check(m, &mut self.massive_buffer) {
+                if let Some(processor) = message_table.get_mut(m.header().id()) {
+                    processor.process(self, m);
+                } else {
+                    warn!("no processor found for {}", m.header().id());
                 }
             }
 
-            sleep(Duration::from_millis(10)).await;
+            counter+=1;
+            if counter > limit {
+                break;
+            }
         }
     }
+
+    // pub async fn run(&mut self, mut message_table: MessageTable) {
+    //     loop {
+    //         if let Some(m) = self.connection.take().unwrap() {
+    //             // decrypt
+    //
+    //             // massive buffer
+    //             if let Some(m) = NetClient::massive_check(m, &mut self.massive_buffer) {
+    //                 if let Some(processor) = message_table.get_mut(m.header().id()) {
+    //                     processor.process(self, m);
+    //                 } else {
+    //                     warn!("no processor found for {}", m.header().id());
+    //                 }
+    //             }
+    //         }
+    //
+    //         sleep(Duration::from_millis(10)).await;
+    //     }
+    // }
 
     fn massive_check(m: Message, massive_buffer: &mut MassiveBuffer) -> Option<Message> {
         if m.header().id()
@@ -125,6 +145,5 @@ impl NetClient {
         };
 
         self.connection.put(message).expect("fix");
-        // ...
     }
 }
