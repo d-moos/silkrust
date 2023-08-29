@@ -2,6 +2,8 @@
 name = "silkrust"
 version = "0.0.1"
 edition = "2021"
+description = "a non-invasive SR module library to build network modules for the Silkroad Online Network"
+license = "GPL-3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
