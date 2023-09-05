@@ -26,7 +26,7 @@ async fn main() {
 
     loop {
         // process messages
-        client.process_messages(&mut m_table, 1).await;
+        client.process_messages(&mut m_table, 1);
 
         // process bot logic
         // execute each loaded plugin

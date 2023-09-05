@@ -78,7 +78,7 @@ impl NetClient {
         &mut self.security
     }
 
-    pub async fn process_messages(&mut self, message_table: &mut MessageTable, limit: usize) {
+    pub fn process_messages(&mut self, message_table: &mut MessageTable, limit: usize) {
         let mut counter = 0;
         while let Some(m) = self.connection.take().unwrap() {
             // decrypt
