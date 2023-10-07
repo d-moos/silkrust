@@ -21,7 +21,7 @@ async fn main() {
 
     env_logger::builder().init();
 
-    let server_connection = NetClient::connect(listener_endpoint.as_str())
+    let server_connection = NetClient::connect(remote_endpoint.as_str())
         .await
         .expect("could not connect to remote");
 
@@ -32,7 +32,7 @@ async fn main() {
     let server_handle = thread::Builder::new().stack_size(1024 * 1024 * 4).spawn(move || server_side.run(server_send)).unwrap();
 
 
-    let listener = TcpListener::bind(remote_endpoint.as_str()).await.expect("could not start listening");
+    let listener = TcpListener::bind(listener_endpoint.as_str()).await.expect("could not start listening");
     let (stream, _addr) = listener.accept().await.unwrap();
     let client: NetClient = stream.into();
 
