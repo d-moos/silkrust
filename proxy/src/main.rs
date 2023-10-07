@@ -13,14 +13,15 @@ use crate::server_side::ServerSide;
 mod client_side;
 mod server_side;
 
-const LISTENER_ENDPOINT: String = String::from("0.0.0.0:1234");
-const REMOTE_ENDPOINT: String = String::from("filter.evolin.net:4001");
-
 #[tokio::main]
 async fn main() {
+    // todo move to config
+    let listener_endpoint: String = String::from("0.0.0.0:1234");
+    let remote_endpoint: String = String::from("filter.evolin.net:4001");
+
     env_logger::builder().init();
 
-    let server_connection = NetClient::connect(LISTENER_ENDPOINT.as_str())
+    let server_connection = NetClient::connect(listener_endpoint.as_str())
         .await
         .expect("could not connect to remote");
 
@@ -31,7 +32,7 @@ async fn main() {
     let server_handle = thread::Builder::new().stack_size(1024 * 1024 * 4).spawn(move || server_side.run(server_send)).unwrap();
 
 
-    let listener = TcpListener::bind(REMOTE_ENDPOINT.as_str()).await.expect("could not start listening");
+    let listener = TcpListener::bind(remote_endpoint.as_str()).await.expect("could not start listening");
     let (stream, _addr) = listener.accept().await.unwrap();
     let client: NetClient = stream.into();
 
