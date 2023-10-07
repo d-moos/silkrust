@@ -1,6 +1,6 @@
 [package]
 name = "silkrust"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 description = "a non-invasive SR module library to build network modules for the Silkroad Online Network"
 license = "GPL-3.0-or-later"
