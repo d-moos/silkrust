@@ -2,7 +2,6 @@ use std::fmt::{Display, Formatter};
 use crate::net::message::header::Header;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::net::message::{HEADER_SIZE, MessageDirection, MessageId, MessageKind};
-use crate::security::Security;
 
 pub const MAX_MESSAGE_SIZE: usize = 4096;
 
@@ -26,6 +25,10 @@ impl Message {
         }
     }
 
+    pub fn is_encrypted(&self) -> bool {
+        self.header.data_size() & 0x8000 != 0
+    }
+
     pub fn header_mut(&mut self) -> &mut Header {
         &mut self.header
     }
@@ -39,9 +42,15 @@ impl Message {
 
 impl Display for Message {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let emoji = if self.is_encrypted() {
+            "🔐"
+        } else {
+            "🔓"
+        };
         write!(
             f,
-            "{}: {:X}",
+            "{} {}: {:X}",
+            emoji,
             self.header,
             self.data
         )

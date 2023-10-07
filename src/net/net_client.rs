@@ -4,14 +4,12 @@ use crate::net::message::MessageKind::Framework;
 use crate::net::message::{Message, MessageId};
 use crate::net::NetConnection;
 use crate::security::Security;
-use bytes::{Buf, BufMut};
-use log::{error, warn};
+use bytes::{Buf};
+use log::{error, trace};
 use std::collections::HashMap;
-use std::time::Duration;
-use tokio::io::AsyncReadExt;
-use tokio::time::sleep;
+use queues::{IsQueue, Queue};
+use tokio::net::TcpStream;#[macro_export]
 
-#[macro_export]
 macro_rules! construct_processor_table {
     // use a given instance (used when the processor is stateful)
     ($($kind:ident, $op:expr, $dir:ident = $proc:ident = $instance:expr),* $(,)?) => {
@@ -48,16 +46,32 @@ macro_rules! construct_processor_table {
     };
 }
 
-pub type MessageTable = HashMap<MessageId, Box<dyn Process>>;
+pub type Processor = Box<dyn Process + Send>;
+pub type MessageTable = HashMap<MessageId, Processor>;
 
 pub trait Process {
     fn process(&mut self, net_client: &mut NetClient, m: Message);
 }
 
 pub struct NetClient {
+    name: String,
     connection: NetConnection,
     massive_buffer: MassiveBuffer,
-    security: Option<Security>,
+    security: Security,
+    loopback: Queue<Message>
+}
+
+impl From<TcpStream> for NetClient {
+    fn from(value: TcpStream) -> Self {
+        let connection: NetConnection = value.into();
+        Self {
+            connection,
+            massive_buffer: MassiveBuffer::default(),
+            security: Security::default(),
+            name: String::from("Unidentified"),
+            loopback: Queue::new()
+        }
+    }
 }
 
 impl NetClient {
@@ -66,84 +80,69 @@ impl NetClient {
         Ok(Self {
             connection,
             massive_buffer: MassiveBuffer::default(),
-            security: None,
+            security: Security::default(),
+            name: String::from("Unidentified"),
+            loopback: Queue::new()
         })
     }
 
-    pub fn set_security(&mut self, security: Security) {
-        self.security = Some(security);
+    pub fn identify(&mut self, name: &str) {
+        self.name = name.to_owned();
+        // self.connection.identify(name);
     }
 
-    pub fn security_mut(&mut self) -> &mut Option<Security> {
+    pub fn close(&mut self) {
+        self.connection.close();
+    }
+
+    pub fn set_security(&mut self, security: Security) {
+        self.security = security;
+    }
+
+    pub fn security_mut(&mut self) -> &mut Security {
         &mut self.security
     }
 
-    pub fn process_messages(&mut self, message_table: &mut MessageTable, limit: usize) {
+    pub fn process_messages(&mut self, message_table: &mut MessageTable, default_handler: &mut Processor, limit: usize) {
+        while let Ok(m) = self.loopback.remove() {
+            trace!("IN  {} {}", self.name, m);
+            self.process_or_default(message_table, default_handler, m);
+        }
+
         let mut counter = 0;
         while let Some(m) = self.connection.take().unwrap() {
+            trace!("IN  {} {}", self.name, m);
+
             // decrypt
+            let m = self.security.decrypt(m);
 
-            // massive buffer
-            if let Some(m) = NetClient::massive_check(m, &mut self.massive_buffer) {
-                if let Some(processor) = message_table.get_mut(m.header().id()) {
-                    processor.process(self, m);
-                } else {
-                    warn!("no processor found for {}", m.header().id());
-                }
-            }
+            // TODO: check error detection
 
-            counter+=1;
+            self.process_or_default(message_table, default_handler, m);
+
+            counter += 1;
             if counter > limit {
                 break;
             }
         }
     }
 
-    // pub async fn run(&mut self, mut message_table: MessageTable) {
-    //     loop {
-    //         if let Some(m) = self.connection.take().unwrap() {
-    //             // decrypt
-    //
-    //             // massive buffer
-    //             if let Some(m) = NetClient::massive_check(m, &mut self.massive_buffer) {
-    //                 if let Some(processor) = message_table.get_mut(m.header().id()) {
-    //                     processor.process(self, m);
-    //                 } else {
-    //                     warn!("no processor found for {}", m.header().id());
-    //                 }
-    //             }
-    //         }
-    //
-    //         sleep(Duration::from_millis(10)).await;
-    //     }
-    // }
-
-    fn massive_check(m: Message, massive_buffer: &mut MassiveBuffer) -> Option<Message> {
-        if m.header().id()
-            != &MessageId::new()
-                .with_kind(Framework)
-                .with_direction(Req)
-                .with_operation(13)
-        {
-            return Some(m);
-        }
-
-        match massive_buffer.add(m) {
-            Ok(_) => massive_buffer.collect(),
-            Err(e) => {
-                error!("could not add massive message to buffer! ({:?})", e);
-                None
-            }
+    fn process_or_default(&mut self, message_table: &mut MessageTable, default_handler: &mut Processor, m: Message) {
+        if let Some(processor) = message_table.get_mut(m.header().id()) {
+            processor.process(self, m);
+        } else {
+            default_handler.process(self, m);
         }
     }
 
-    pub fn send(&mut self, message: Message) {
-        let message = if let Some(security) = &mut self.security {
-            security.encode(message)
-        } else {
-            message
-        };
+    pub fn receive(&mut self, message: Message) {
+        self.loopback.add(message).expect("never err");
+    }
 
+    pub fn send(&mut self, message: Message) {
+        let message = self.security.encode(message);
+
+        trace!("OUT {} {}", self.name, message);
         self.connection.put(message).expect("fix");
     }
 }

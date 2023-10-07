@@ -6,6 +6,12 @@ pub struct Sequencer {
     byte2: u8,
 }
 
+impl Default for Sequencer {
+    fn default() -> Self {
+        Sequencer::new(0)
+    }
+}
+
 impl Sequencer {
     pub fn new(value: u32) -> Self {
         let mut0 = if value != 0 { value } else { DEFAULT_SEED };

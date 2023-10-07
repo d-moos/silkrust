@@ -3,6 +3,12 @@ pub struct Checksum {
     table: [u32; 256 * 256],
 }
 
+impl Default for Checksum {
+    fn default() -> Self {
+        Checksum::new(0)
+    }
+}
+
 impl Checksum {
     pub fn new(seed: u32) -> Self {
         Self {

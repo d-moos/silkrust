@@ -1,4 +1,4 @@
-#![no_std]
+
 //! (taken from: https://git.eternalwings.de/tim/blowfish-compat.rs)
 //! Wrapper under the blowfish algorithm
 //! Implements compatibility with

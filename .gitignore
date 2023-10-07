@@ -1,6 +1,4 @@
-/target
-/caliente/target
-/caliente/Cargo.lock
-/Cargo.lock
+**/target
+**/Cargo.lock
 
 .idea/

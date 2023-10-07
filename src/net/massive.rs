@@ -1,22 +1,36 @@
 use crate::net::message::{Header, Message, MessageId};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use log::trace;
+use log::{error, trace};
+use crate::net::{NetClient, Process};
 
+#[derive(Default)]
+pub struct MassiveProcessor {
+    buffer: MassiveBuffer
+}
+
+impl Process for MassiveProcessor {
+    fn process(&mut self, net_client: &mut NetClient, m: Message) {
+        let collected = match self.buffer.add(m) {
+            Ok(_) => self.buffer.collect(),
+            Err(e) => {
+                error!("could not add massive message to buffer! ({:?})", e);
+                None
+            }
+        };
+
+        if let Some(message) = collected {
+            net_client.receive(message);
+        }
+    }
+}
+
+#[derive(Default)]
 pub(crate) struct MassiveBuffer {
     header: Option<MassiveHeader>,
     count: usize,
     data: BytesMut,
 }
 
-impl Default for MassiveBuffer {
-    fn default() -> Self {
-        Self {
-            count: 0,
-            data: BytesMut::new(),
-            header: None,
-        }
-    }
-}
 
 #[derive(Debug)]
 pub(crate) enum MassiveError {

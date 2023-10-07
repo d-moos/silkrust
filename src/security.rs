@@ -7,7 +7,7 @@ mod sequencer;
 pub use self::security::{Security, SecurityBuilder};
 mod security;
 
-pub use self::secret_context::{BlowfishKey, Signature, SecretContext, RemotePublicNotSet};
-mod secret_context;
-
 pub mod blowfish_compat;
+
+pub use self::exchange::{Exchange, Challenge, NotSet, Set, Initiator, Responder, ChallengeMismatch, Signature, Key};
+mod exchange;

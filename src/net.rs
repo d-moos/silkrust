@@ -8,9 +8,10 @@ mod message_buffer;
 pub use self::net_connection::NetConnection;
 mod net_connection;
 
-pub use self::net_client::{MessageTable, NetClient, Process};
+pub use self::net_client::{MessageTable, Processor, NetClient, Process};
 mod net_client;
 
 mod massive;
 
 pub mod io;
+pub mod net_engine;

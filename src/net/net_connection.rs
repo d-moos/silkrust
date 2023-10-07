@@ -1,28 +1,43 @@
+use crate::net::message::{Message, MAX_MESSAGE_SIZE};
+use crate::net::MessageBuffer;
+use bytes::Bytes;
+use log::error;
 use queues::{IsQueue, Queue};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
-use bytes::Bytes;
-use log::trace;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::task::JoinHandle;
-use tokio::{select, spawn};
 use tokio::time::sleep;
-use crate::net::message::{MAX_MESSAGE_SIZE, Message};
-use crate::net::MessageBuffer;
+use tokio::{select, spawn};
 
 type SyncMutex<T> = Arc<Mutex<T>>;
-type AsyncMutex<T> = Arc<tokio::sync::Mutex<T>>;
 type MessageQueue = Queue<Message>;
 type SyncQueue = SyncMutex<MessageQueue>;
 
 pub struct NetConnection {
-    addr: String,
+    // addr: String,
     inbound: SyncQueue,
     outbound: SyncQueue,
 
     run_handle: JoinHandle<()>,
+}
+
+impl From<TcpStream> for NetConnection {
+    fn from(value: TcpStream) -> Self {
+        let inbound = Arc::new(Mutex::new(Queue::new()));
+        let outbound = Arc::new(Mutex::new(Queue::new()));
+
+        let run_handle = spawn(NetConnection::run(value, inbound.clone(), outbound.clone()));
+
+        Self {
+            // addr: addr.to_string(),
+            run_handle,
+            inbound,
+            outbound,
+        }
+    }
 }
 
 impl NetConnection {
@@ -31,27 +46,29 @@ impl NetConnection {
         let inbound = Arc::new(Mutex::new(Queue::new()));
         let outbound = Arc::new(Mutex::new(Queue::new()));
 
-        let run_handle = spawn(NetConnection::run(stream, inbound.clone(), outbound.clone()));
+        let run_handle = spawn(NetConnection::run(
+            stream,
+            inbound.clone(),
+            outbound.clone(),
+        ));
 
         Ok(Self {
-            addr: addr.to_string(),
+            // addr: addr.to_string(),
             run_handle,
             inbound,
-            outbound
+            outbound,
         })
     }
 
     async fn run(mut stream: TcpStream, inbound_queue: SyncQueue, outbound_queue: SyncQueue) {
         let (read, write) = stream.split();
 
-        let inbound = inbound_queue.clone();
-        let outbound = outbound_queue.clone();
         let f = select! {
             r = NetConnection::inbound_loop(read, inbound_queue) => r,
             r = NetConnection::outbound_loop(write, outbound_queue) => r,
         };
 
-        println!("select resulted in {:?}", f);
+        error!("select resulted in {:?}", f);
     }
 
     pub fn close(&mut self) {
@@ -59,24 +76,19 @@ impl NetConnection {
     }
 
     pub fn take(&mut self) -> Result<Option<Message>, PoisonError<MutexGuard<MessageQueue>>> {
-        Ok(self
-            .inbound
-            .lock()?
-            .remove()
-            .map_or(None, |m| Some(m)))
+        Ok(self.inbound.lock()?.remove().map_or(None, |m| Some(m)))
     }
 
     pub fn put(&mut self, message: Message) -> Result<(), PoisonError<MutexGuard<MessageQueue>>> {
         let mut queue = self.outbound.lock()?;
-        queue.add(message).expect("returns always Ok(None) according to docs");
+        queue
+            .add(message)
+            .expect("returns always Ok(None) according to docs");
         Ok(())
     }
 
     /// TODO: Error Mapping
-    async fn inbound_loop<'a>(
-        mut stream: ReadHalf<'a>,
-        inbound: SyncQueue,
-    ) -> Result<(), ()> {
+    async fn inbound_loop<'a>(mut stream: ReadHalf<'a>, inbound: SyncQueue) -> Result<(), ()> {
         loop {
             // stream.readable().await.map_err(|_| ())?;
             let mut message_buffer = MessageBuffer::default();
@@ -91,7 +103,7 @@ impl NetConnection {
             let messages = message_buffer.read(net_buffer, len);
             let mut inbound_queue = inbound.lock().map_err(|_| ())?;
             for message in messages {
-                trace!("IN:  {}", message);
+                // trace!("IN  {}", message);
                 inbound_queue.add(message).map_err(|_| ())?;
             }
         }
@@ -112,7 +124,7 @@ impl NetConnection {
             };
 
             for message in messages {
-                trace!("OUT: {}", message);
+                // trace!("OUT {}", message);
                 let b: Bytes = message.into();
                 stream.write(b.as_ref()).await.map_err(|_| ())?;
             }
