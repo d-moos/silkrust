@@ -4,11 +4,12 @@ use crate::net::message::MessageKind::Framework;
 use crate::net::message::{Message, MessageId};
 use crate::net::NetConnection;
 use crate::security::Security;
-use bytes::{Buf};
+use bytes::Buf;
 use log::{error, trace};
-use std::collections::HashMap;
 use queues::{IsQueue, Queue};
-use tokio::net::TcpStream;#[macro_export]
+use std::collections::HashMap;
+use tokio::net::TcpStream;
+#[macro_export]
 
 macro_rules! construct_processor_table {
     // use a given instance (used when the processor is stateful)
@@ -58,7 +59,7 @@ pub struct NetClient {
     connection: NetConnection,
     massive_buffer: MassiveBuffer,
     security: Security,
-    loopback: Queue<Message>
+    loopback: Queue<Message>,
 }
 
 impl From<TcpStream> for NetClient {
@@ -69,7 +70,7 @@ impl From<TcpStream> for NetClient {
             massive_buffer: MassiveBuffer::default(),
             security: Security::default(),
             name: String::from("Unidentified"),
-            loopback: Queue::new()
+            loopback: Queue::new(),
         }
     }
 }
@@ -82,7 +83,7 @@ impl NetClient {
             massive_buffer: MassiveBuffer::default(),
             security: Security::default(),
             name: String::from("Unidentified"),
-            loopback: Queue::new()
+            loopback: Queue::new(),
         })
     }
 
@@ -103,7 +104,12 @@ impl NetClient {
         &mut self.security
     }
 
-    pub fn process_messages(&mut self, message_table: &mut MessageTable, default_handler: &mut Processor, limit: usize) {
+    pub fn process_messages(
+        &mut self,
+        message_table: &mut MessageTable,
+        default_handler: &mut Processor,
+        limit: usize,
+    ) {
         while let Ok(m) = self.loopback.remove() {
             trace!("IN  {} {}", self.name, m);
             self.process_or_default(message_table, default_handler, m);
@@ -127,7 +133,12 @@ impl NetClient {
         }
     }
 
-    fn process_or_default(&mut self, message_table: &mut MessageTable, default_handler: &mut Processor, m: Message) {
+    fn process_or_default(
+        &mut self,
+        message_table: &mut MessageTable,
+        default_handler: &mut Processor,
+        m: Message,
+    ) {
         if let Some(processor) = message_table.get_mut(m.header().id()) {
             processor.process(self, m);
         } else {

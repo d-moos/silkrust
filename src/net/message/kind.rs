@@ -19,17 +19,21 @@ pub enum MessageKind {
     Framework,
 
     /// Actual Gameplay (Agent interactions, Shard operations, ...)
-    Game
+    Game,
 }
 
 impl Display for MessageKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            MessageKind::None => "None",
-            MessageKind::NetEngine => "NetEngine",
-            MessageKind::Framework => "Framework",
-            MessageKind::Game => "Game",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                MessageKind::None => "None",
+                MessageKind::NetEngine => "NetEngine",
+                MessageKind::Framework => "Framework",
+                MessageKind::Game => "Game",
+            }
+        )
     }
 }
 
@@ -39,7 +43,7 @@ impl MessageKind {
             MessageKind::None => NONE,
             MessageKind::NetEngine => NET_ENGINE,
             MessageKind::Framework => FRAMEWORK,
-            MessageKind::Game => GAME
+            MessageKind::Game => GAME,
         }
     }
 
@@ -49,7 +53,7 @@ impl MessageKind {
             NET_ENGINE => MessageKind::NetEngine,
             FRAMEWORK => MessageKind::Framework,
             GAME => MessageKind::Game,
-            _ => panic!("invalid message kind")
+            _ => panic!("invalid message kind"),
         }
     }
 }

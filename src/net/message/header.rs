@@ -1,6 +1,6 @@
-use std::fmt::{Display, Formatter};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crate::net::message::id::MessageId;
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use std::fmt::{Display, Formatter};
 
 pub const HEADER_SIZE: usize = 6;
 const HEADER_ENC_MASK: u16 = 0x8000;
@@ -27,13 +27,7 @@ pub struct Header {
 
 impl Display for Header {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} [{:X} {:X}]",
-            self.id,
-            self.sequence,
-            self.checksum,
-        )
+        write!(f, "{} [{:X} {:X}]", self.id, self.sequence, self.checksum,)
     }
 }
 
@@ -43,7 +37,7 @@ impl Header {
             id,
             size,
             checksum: 0,
-            sequence: 0
+            sequence: 0,
         }
     }
 
@@ -66,7 +60,7 @@ impl From<Bytes> for Header {
             size: value.get_u16_le(),
             id: MessageId::from(value.get_u16_le()),
             sequence: value.get_u8(),
-            checksum: value.get_u8()
+            checksum: value.get_u8(),
         }
     }
 }

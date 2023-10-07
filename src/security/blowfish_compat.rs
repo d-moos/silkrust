@@ -1,4 +1,3 @@
-
 //! (taken from: https://git.eternalwings.de/tim/blowfish-compat.rs)
 //! Wrapper under the blowfish algorithm
 //! Implements compatibility with
@@ -46,7 +45,10 @@ pub fn reverse_words(buf: &mut [u8]) {
         unsafe {
             let buf_len = buf.len();
             // chunk by chunk where size is power of WORD but not huge or "bus-err/out of mem".
-            return bswap::u32::swap_memory_inplace(&mut buf[0] as *mut u8, buf_len - buf_len % WORD);
+            return bswap::u32::swap_memory_inplace(
+                &mut buf[0] as *mut u8,
+                buf_len - buf_len % WORD,
+            );
         }
 
         #[cfg(not(feature = "bswap"))]

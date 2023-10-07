@@ -1,6 +1,6 @@
-use std::string::FromUtf8Error;
-use bytes::{Buf, Bytes};
 use crate::net::io::fragment::Fragment;
+use bytes::{Buf, Bytes};
+use std::string::FromUtf8Error;
 
 pub trait BytesExtension {
     fn get_collection<T: Fragment>(&mut self) -> Vec<T>;

@@ -9,5 +9,7 @@ mod security;
 
 pub mod blowfish_compat;
 
-pub use self::exchange::{Exchange, Challenge, NotSet, Set, Initiator, Responder, ChallengeMismatch, Signature, Key};
+pub use self::exchange::{
+    Challenge, ChallengeMismatch, Exchange, Initiator, Key, NotSet, Responder, Set, Signature,
+};
 mod exchange;

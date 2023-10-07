@@ -1,6 +1,6 @@
+use crate::security::{Key, Signature};
 use bitfield_struct::bitfield;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crate::security::{Key, Signature};
 
 #[bitfield(u8)]
 pub struct HandshakeOptions {
@@ -38,10 +38,7 @@ impl Into<Bytes> for ErrorDetectionSeed {
 
 impl ErrorDetectionSeed {
     pub fn new(sequence: u32, checksum: u32) -> Self {
-        Self {
-            sequence,
-            checksum
-        }
+        Self { sequence, checksum }
     }
 }
 
@@ -83,7 +80,7 @@ impl ExchangeSetup {
             initial_key,
             generator,
             prime,
-            public
+            public,
         }
     }
 }
@@ -109,18 +106,12 @@ impl From<Bytes> for ExchangeResponse {
         let mut signature = Signature::default();
         value.copy_to_slice(signature.as_mut_slice());
 
-        Self {
-            public,
-            signature
-        }
+        Self { public, signature }
     }
 }
 
 impl ExchangeResponse {
     pub fn new(public: u32, signature: Signature) -> Self {
-        Self {
-            public,
-            signature
-        }
+        Self { public, signature }
     }
 }

@@ -1,3 +1,3 @@
-pub use self::handshake::{ErrorDetectionSeed, ExchangeSetup, HandshakeOptions, ExchangeResponse};
+pub use self::handshake::{ErrorDetectionSeed, ExchangeResponse, ExchangeSetup, HandshakeOptions};
 
 mod handshake;

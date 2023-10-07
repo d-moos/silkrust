@@ -1,11 +1,11 @@
 use crate::net::message::{Header, Message, MessageId};
+use crate::net::{NetClient, Process};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use log::{error, trace};
-use crate::net::{NetClient, Process};
 
 #[derive(Default)]
 pub struct MassiveProcessor {
-    buffer: MassiveBuffer
+    buffer: MassiveBuffer,
 }
 
 impl Process for MassiveProcessor {
@@ -30,7 +30,6 @@ pub(crate) struct MassiveBuffer {
     count: usize,
     data: BytesMut,
 }
-
 
 #[derive(Debug)]
 pub(crate) enum MassiveError {

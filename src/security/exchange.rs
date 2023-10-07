@@ -208,7 +208,7 @@ mod tests {
         let (g, prime, initial): (u32, u32, Key) = (
             rand::random::<u32>() & 0x7FFFFFFF,
             rand::random::<u32>() & 0x7FFFFFFF,
-            rand::random()
+            rand::random(),
         );
 
         let initiator = Exchange::<NotSet>::default()

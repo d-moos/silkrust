@@ -21,16 +21,20 @@ pub enum MessageDirection {
     /// Acknowledge
     ///
     /// The message is sent as answer to a previous message
-    Ack
+    Ack,
 }
 
 impl Display for MessageDirection {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            MessageDirection::NoDir => "NoDir",
-            MessageDirection::Req => "Req",
-            MessageDirection::Ack => "Ack",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                MessageDirection::NoDir => "NoDir",
+                MessageDirection::Req => "Req",
+                MessageDirection::Ack => "Ack",
+            }
+        )
     }
 }
 
@@ -48,7 +52,7 @@ impl MessageDirection {
             NO_DIR => MessageDirection::NoDir,
             REQ => MessageDirection::Req,
             ACK => MessageDirection::Ack,
-            _ => panic!("invalid message direction")
+            _ => panic!("invalid message direction"),
         }
     }
 }
